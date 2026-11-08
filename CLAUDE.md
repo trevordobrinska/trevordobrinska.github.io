@@ -9,6 +9,7 @@ Plain HTML, CSS and ES modules, published as is by GitHub Pages. No framework, b
 - `games.js`: the hand-edited Games list, the only file to edit to change the menu
 - `menu.js`: the Menu module, a pure function from Games list to ordered Tiles, with validation (the one tested seam)
 - `main.js`, `index.html`, `style.css`: draw the Tiles (not unit-tested)
+- `manifest.webmanifest`, `sw.js`, `icons/`: make the Arcade installable and fullscreen. `sw.js` is a copy of Secret Script Studio's pass-through worker and must keep saving nothing. The icons are made by `node tools/make-icons.js` (Node built-ins only) and committed
 - Tests: `node --test` (Node's built-in runner, files in `test/`)
 - To view locally, serve the folder at the site root, e.g. `python -m http.server`, then open `http://localhost:8000/`. Opening `index.html` as a file won't load the modules.
 

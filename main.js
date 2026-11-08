@@ -51,3 +51,11 @@ function badge(text) {
   element.textContent = text;
   return element;
 }
+
+// The pass-through worker in sw.js saves nothing; it's only there so Chromium
+// and Silk offer to install the Arcade. Registered at the site root.
+if ("serviceWorker" in navigator) {
+  navigator.serviceWorker
+    .register("/sw.js", { scope: "/" })
+    .catch((error) => console.warn("Service worker not registered", error));
+}
