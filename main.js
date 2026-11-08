@@ -16,12 +16,11 @@ try {
 function renderTile(tile) {
   const item = document.createElement("li");
 
-  // Only Ready and Test Tiles are links; a Coming-soon Tile is a plain box
-  // with nothing to tap.
-  const box = document.createElement(tile.href ? "a" : "div");
+  // A playable Tile is a link; any other is a plain box with nothing to tap.
+  const box = document.createElement(tile.playable ? "a" : "div");
   box.className = "tile tile-" + tile.state;
-  if (tile.href) box.href = tile.href;
-  if (tile.state === "coming-soon") box.setAttribute("aria-disabled", "true");
+  if (tile.playable) box.href = tile.href;
+  else box.setAttribute("aria-disabled", "true");
 
   const art = document.createElement("div");
   art.className = "tile-art";
@@ -38,8 +37,7 @@ function renderTile(tile) {
   name.textContent = tile.name;
   box.appendChild(name);
 
-  if (tile.state === "test") box.appendChild(badge("TEST"));
-  if (tile.state === "coming-soon") box.appendChild(badge("Coming soon"));
+  if (tile.badge) box.appendChild(badge(tile.badge));
 
   item.appendChild(box);
   return item;
@@ -53,7 +51,9 @@ function badge(text) {
 }
 
 // The pass-through worker in sw.js saves nothing; it's only there so Chromium
-// and Silk offer to install the Arcade. Registered at the site root.
+// and Silk offer to install the Arcade. The root scope is the Arcade's on
+// purpose (DESIGN.md, Build); Games must not do this (SUITE-RULES #3: a Game's
+// worker stays inside its own path).
 if ("serviceWorker" in navigator) {
   navigator.serviceWorker
     .register("/sw.js", { scope: "/" })

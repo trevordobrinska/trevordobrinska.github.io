@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { menu } from "../menu.js";
 import { games } from "../games.js";
 
-test("Tiles are Ready, then Test, then Coming-soon, keeping list order within each group", () => {
+test("Tiles are Ready, then Test, then Coming-soon, keeping list order within each group; only Ready and Test are playable and only Test is badged", () => {
   const tiles = menu([
     { slug: "c1", name: "C1", state: "coming-soon" },
     { slug: "r1", name: "R1", state: "ready" },
@@ -13,8 +13,15 @@ test("Tiles are Ready, then Test, then Coming-soon, keeping list order within ea
     { slug: "t2", name: "T2", state: "test", path: "b.html" },
   ]);
   assert.deepEqual(
-    tiles.map((t) => t.name),
-    ["R1", "R2", "T1", "T2", "C1", "C2"],
+    tiles.map((t) => [t.name, t.state, t.playable, t.badge]),
+    [
+      ["R1", "ready", true, null],
+      ["R2", "ready", true, null],
+      ["T1", "test", true, "TEST"],
+      ["T2", "test", true, "TEST"],
+      ["C1", "coming-soon", false, null],
+      ["C2", "coming-soon", false, null],
+    ],
   );
 });
 
@@ -94,6 +101,25 @@ test("rejects a Test entry without a path", () => {
   }
 });
 
+test("rejects a Test path that starts with a slash", () => {
+  assert.throws(
+    () => menu([{ slug: "doodle-monsters", name: "Night 1", state: "test", path: "/night1/" }]),
+    /path/,
+  );
+});
+
+test("rejects an entry with a missing or empty slug", () => {
+  for (const state of ["ready", "coming-soon", "test"]) {
+    for (const slug of [undefined, "", "   "]) {
+      assert.throws(
+        () => menu([{ slug, name: "Doodle Monsters", state, path: "night1/" }]),
+        /slug/,
+        `${state} slug ${JSON.stringify(slug)} should be rejected`,
+      );
+    }
+  }
+});
+
 test("a Test entry may share its slug with a Coming-soon or Ready entry", () => {
   const tiles = menu([
     { slug: "doodle-monsters", name: "Doodle Monsters", state: "coming-soon" },
@@ -112,17 +138,5 @@ test("the real launch Games list is valid: Doodle Monsters and Secret Script Stu
       ["doodle-monsters", "coming-soon", null],
       ["secret-script-studio", "coming-soon", null],
     ],
-  );
-});
-
-test("each Tile says which kind it is", () => {
-  const tiles = menu([
-    { slug: "a", name: "A", state: "coming-soon" },
-    { slug: "b", name: "B", state: "test", path: "x/" },
-    { slug: "c", name: "C", state: "ready" },
-  ]);
-  assert.deepEqual(
-    tiles.map((t) => t.state),
-    ["ready", "test", "coming-soon"],
   );
 });

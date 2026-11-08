@@ -32,7 +32,7 @@ function roundRect(x, y, left, top, right, bottom, r) {
 
 // "any" icons get rounded corners; the maskable one fills the square and
 // shrinks the joystick into the central safe zone (a circle of radius 0.4).
-function sample(x, y, maskable) {
+function colorAt(x, y, maskable) {
   const scale = maskable ? 0.8 : 1;
   if (!maskable && !roundRect(x, y, 0, 0, 1, 1, 0.18)) return null;
   const ux = 0.5 + (x - 0.5) / scale;
@@ -42,28 +42,33 @@ function sample(x, y, maskable) {
   return color;
 }
 
-// 4x4 supersampling for smooth edges.
+// Samples per pixel along each axis (4x4) for smooth edges.
+const SUPERSAMPLE = 4;
+
 function render(size, maskable) {
-  const n = 4;
   const rows = [];
   for (let py = 0; py < size; py++) {
     const row = Buffer.alloc(1 + size * 4); // filter byte 0, then RGBA
     for (let px = 0; px < size; px++) {
       let r = 0, g = 0, b = 0, a = 0;
-      for (let sy = 0; sy < n; sy++) {
-        for (let sx = 0; sx < n; sx++) {
-          const c = sample((px + (sx + 0.5) / n) / size, (py + (sy + 0.5) / n) / size, maskable);
+      for (let sy = 0; sy < SUPERSAMPLE; sy++) {
+        for (let sx = 0; sx < SUPERSAMPLE; sx++) {
+          const c = colorAt(
+            (px + (sx + 0.5) / SUPERSAMPLE) / size,
+            (py + (sy + 0.5) / SUPERSAMPLE) / size,
+            maskable,
+          );
           if (!c) continue;
           r += c[0]; g += c[1]; b += c[2]; a++;
         }
       }
-      const o = 1 + px * 4;
+      const offset = 1 + px * 4;
       if (a) {
-        row[o] = Math.round(r / a);
-        row[o + 1] = Math.round(g / a);
-        row[o + 2] = Math.round(b / a);
+        row[offset] = Math.round(r / a);
+        row[offset + 1] = Math.round(g / a);
+        row[offset + 2] = Math.round(b / a);
       }
-      row[o + 3] = Math.round((a / (n * n)) * 255);
+      row[offset + 3] = Math.round((a / (SUPERSAMPLE * SUPERSAMPLE)) * 255);
     }
     rows.push(row);
   }
