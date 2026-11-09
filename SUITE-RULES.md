@@ -8,4 +8,4 @@ Every Game is published under `https://trevordobrinska.github.io/<game-slug>/`. 
 4. **Publish a Tile icon** at `/<game-slug>/icon-512.png`: square, 512×512 PNG. The Arcade loads it from there.
 5. **A way home.** The Game's home screen has a small house button linking to the Arcade (`/`).
 6. **Don't ask to be installed.** Only the Arcade goes on the home screen. A Game may keep its own manifest, but nothing should prompt the kids to install it.
-7. **Getting a Tile.** A Game appears in the Arcade only when Dad calls it Ready (or as a Coming-soon or temporary Test Tile). That's a change to the Arcade repo, not the Game's.
+7. **Getting a Tile.** A Game becomes Ready after a passing Ready check plus Dad's call; only then does it get a playable Tile. Before that it has no Tile, unless Dad gives it a Coming-soon or temporary Test Tile. That's a change to the Arcade repo, not the Game's.
