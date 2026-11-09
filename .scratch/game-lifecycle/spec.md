@@ -1,6 +1,6 @@
 # Spec: Game lifecycle (how a new Game joins the Arcade, and the Ready check)
 
-Status: ready-for-agent
+Status: ready-for-agent (tickets 01–06 in `issues/`)
 
 Sources: grilling session 2026-11-08 (after the first three-repo audit), `DESIGN.md`, `GLOSSARY.md` (Game, Tile, Coming-soon Tile, Ready, Test Tile, Games list, Menu module), `SUITE-RULES.md`, and ADR 0001 (separate repos, one origin). Where this spec and DESIGN.md disagree, DESIGN.md wins: flag it, don't silently pick.
 
