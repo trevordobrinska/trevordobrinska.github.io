@@ -97,3 +97,51 @@ test("the verdict has one entry per Game, in the order given", () => {
     ["doodle-monsters", "secret-script-studio"],
   );
 });
+
+test("git housekeeping in a Game's repo becomes \"for you\" items and never fails a check", () => {
+  const facts = goodGame();
+  facts.git = {
+    defaultBranch: "main",
+    unmergedBranches: [{ name: "worktree-night-1-results", commits: 1 }],
+    unpushed: [{ branch: "main", commits: 2 }],
+    untracked: [".scratch/arcade/handoff.md"],
+    worktrees: [
+      { path: "C:/Projects/doodle-monsters/.claude/worktrees/night-1", branch: "worktree-night-1-results", merged: false },
+      { path: "C:/Projects/doodle-monsters/.claude/worktrees/old", branch: "worktree-old", merged: true },
+    ],
+  };
+  const [game] = readyCheck([facts]).games;
+  assert.equal(game.passes, true);
+  assert.deepEqual(game.tickets, []);
+  assert.deepEqual(game.forYou, [
+    "Merge worktree-night-1-results (1 commit) into main",
+    "Push 2 commits on main",
+    "Commit or delete untracked .scratch/arcade/handoff.md",
+    "Merge or remove worktree C:/Projects/doodle-monsters/.claude/worktrees/night-1 (worktree-night-1-results, not merged)",
+    "Remove merged worktree C:/Projects/doodle-monsters/.claude/worktrees/old (worktree-old)",
+  ]);
+});
+
+test('a Game with no local repo gets one "for you" item saying so, and still passes', () => {
+  const facts = goodGame("glyph-mines");
+  facts.git = null;
+  const [game] = readyCheck([facts]).games;
+  assert.equal(game.passes, true);
+  assert.equal(game.forYou.length, 1);
+  assert.match(game.forYou[0], /no local repo/i);
+});
+
+test("a sweep returns one row per Game and one manual tablet list for house button and Back", () => {
+  const slugs = ["doodle-monsters", "secret-script-studio", "glyph-mines"];
+  const verdict = readyCheck(slugs.map((slug) => goodGame(slug)));
+  assert.deepEqual(verdict.games.map((g) => g.slug), slugs);
+  assert.equal(verdict.tabletList.length, 2);
+  const [house, back] = verdict.tabletList;
+  assert.match(house.name, /house button/i);
+  assert.match(back.name, /Back/);
+  for (const item of verdict.tabletList) {
+    assert.equal(item.rule, 5);
+    assert.match(item.steps, /Arcade/);
+    assert.ok(item.ticket.title && item.ticket.whatToBuild && item.ticket.acceptance.length > 0);
+  }
+});
