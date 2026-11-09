@@ -7,6 +7,20 @@
 //   icon   { status, png }  HTTP status of /<slug>/icon-512.png, and
 //                           png: { width, height } read from its IHDR, or
 //                           null if the bytes aren't a PNG (or didn't load)
+//   source what the Game's own source says (read from its local repo):
+//     storage         [{ kind, name, file, line }] each saved-data name found:
+//                     kind "indexedDB", "localStorage" or "cache"; name is the
+//                     literal name (or its fixed start, for "night1:verdict:" +
+//                     id), or null with an `expression` when it can't be read
+//     linksHome       [{ file, line }] each link to the site root "/"
+//     serviceWorkers  [{ file, line, scope }] each service worker
+//                     registration; scope is the site path it can control
+//                     (e.g. "/secret-script-studio/"), or null if unreadable
+//
+// Options (second argument to readyCheck):
+//   exceptions  [{ slug, name, why }] accepted rule 2 exceptions: that Game
+//               may use that exact unprefixed storage name (e.g. a throwaway
+//               test page). Kept as data next to the CLI, not in this logic.
 //
 // Verdict: { games: [one entry per Game, in the order given] }, each entry
 //   slug     the Game's slug
@@ -20,8 +34,8 @@
 //   name     the grid column, and how tickets refer to it
 //   rule     the SUITE-RULES.md rule number it enforces
 //   needs    names of checks that must pass first, or it's skipped
-//   judge    (facts) => true when the Game meets the check
-//   ticket   (facts) => { title, whatToBuild, acceptance } drafted on failure
+//   judge    (facts, options) => true when the Game meets the check
+//   ticket   (facts, options) => { title, whatToBuild, acceptance } on failure
 const CHECKS = [
   {
     name: "live page",
@@ -81,13 +95,99 @@ const CHECKS = [
       ],
     }),
   },
+  {
+    name: "storage prefixed",
+    rule: 2,
+    needs: [],
+    judge: (facts, options) => unprefixedStorage(facts, options).length === 0,
+    ticket: (facts, options) => ({
+      title: "Start every saved-data name with " + facts.slug,
+      whatToBuild:
+        "Every Game shares one browser origin, so IndexedDB database names, localStorage keys " +
+        "and cache names must all start with \"" + facts.slug + "\" (suite rule 2). The source has " +
+        "names that don't, or that the Ready check can't read: " +
+        unprefixedStorage(facts, options).map(describeStorage).join("; ") + ". " +
+        "Rename them (keeping the kids' existing saves, e.g. by copying old data across once), " +
+        "and write each name as a string literal or a constant so the check can read it.",
+      acceptance: [
+        "Every IndexedDB database, localStorage key and cache name in the source starts with \"" +
+          facts.slug + "\"",
+        "Saves made before the rename still load",
+        "The Ready check's \"storage prefixed\" passes",
+      ],
+    }),
+  },
+  {
+    name: "link home",
+    rule: 5,
+    needs: [],
+    judge: (facts) => facts.source.linksHome.length > 0,
+    ticket: () => ({
+      title: "Add a house button back to the Arcade",
+      whatToBuild:
+        "The Game's source has no link to the site root \"/\", so the kids can only leave it " +
+        "with the tablet's Back. Add a small house button to the Game's home screen that links " +
+        "to the Arcade at \"/\" (suite rule 5), e.g. <a href=\"/\">.",
+      acceptance: [
+        "The Game's home screen shows a small house button",
+        "Tapping it opens the Arcade (https://trevordobrinska.github.io/)",
+        "The Ready check's \"link home\" passes",
+      ],
+    }),
+  },
+  {
+    name: "service worker scope",
+    rule: 3,
+    needs: [],
+    judge: (facts) => strayWorkers(facts).length === 0,
+    ticket: (facts) => ({
+      title: "Keep the service worker inside /" + facts.slug + "/",
+      whatToBuild:
+        "Every Game shares one origin with the Arcade, so a Game's service worker must be scoped " +
+        "to its own path /" + facts.slug + "/ and never claim the site root (suite rule 3). " +
+        "These registrations could reach outside it, or their scope can't be read: " +
+        strayWorkers(facts)
+          .map((w) => w.file + ":" + w.line + " (scope " + (w.scope === null ? "unreadable" : w.scope) + ")")
+          .join("; ") +
+        ". Register the worker from a relative URL inside the Game's path (e.g. " +
+        "new URL(\"sw.js\", document.baseURI)) with no wider scope.",
+      acceptance: [
+        "Every service worker registration's scope is inside /" + facts.slug + "/",
+        "The Arcade's own service worker at / still controls the Arcade after opening the Game",
+        "The Ready check's \"service worker scope\" passes",
+      ],
+    }),
+  },
 ];
 
-export function readyCheck(gamesFacts) {
-  return { games: gamesFacts.map(checkGame) };
+// Service worker registrations whose scope isn't inside /<slug>/.
+function strayWorkers(facts) {
+  const own = "/" + facts.slug + "/";
+  return facts.source.serviceWorkers.filter((w) => w.scope === null || !w.scope.startsWith(own));
 }
 
-function checkGame(facts) {
+// Storage names that break rule 2: not starting with the slug, unreadable,
+// and not an accepted exception for this Game.
+function unprefixedStorage(facts, options) {
+  const excused = new Set(
+    options.exceptions.filter((e) => e.slug === facts.slug).map((e) => e.name),
+  );
+  return facts.source.storage.filter(
+    (s) => s.name === null || (!s.name.startsWith(facts.slug) && !excused.has(s.name)),
+  );
+}
+
+function describeStorage(s) {
+  const what = s.name === null ? "an unreadable name (" + s.expression + ")" : "\"" + s.name + "\"";
+  return s.kind + " " + what + " at " + s.file + ":" + s.line;
+}
+
+export function readyCheck(gamesFacts, { exceptions = [] } = {}) {
+  const options = { exceptions };
+  return { games: gamesFacts.map((facts) => checkGame(facts, options)) };
+}
+
+function checkGame(facts, options) {
   const status = {};
   const checks = [];
   const tickets = [];
@@ -95,11 +195,11 @@ function checkGame(facts) {
     if (check.needs.some((name) => status[name] !== "pass")) {
       status[check.name] = "skip";
     } else {
-      status[check.name] = check.judge(facts) ? "pass" : "fail";
+      status[check.name] = check.judge(facts, options) ? "pass" : "fail";
     }
     checks.push({ name: check.name, rule: check.rule, status: status[check.name] });
     if (status[check.name] === "fail") {
-      tickets.push({ check: check.name, rule: check.rule, ...check.ticket(facts) });
+      tickets.push({ check: check.name, rule: check.rule, ...check.ticket(facts, options) });
     }
   });
   return {
