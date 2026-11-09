@@ -9,7 +9,7 @@
 - [x] Manifest: name and short_name "Dobrinska Arcade", `display: fullscreen`, scope and start URL `/`, the Arcade's own colours
 - [x] The Arcade has its own simple icons (192, 512 and a maskable 512), made without adding build tooling
 - [x] The service worker is a copy of Secret Script Studio's pass-through worker (skip waiting, claim clients, every fetch goes to the network), registered at the site root, saving nothing; it isn't registered when running from a local dev server if that gets in the way
-- [ ] Served locally from the folder root, Chromium's installability check passes and the installed window opens fullscreen
+- [x] Served locally from the folder root, Chromium's installability check passes and the installed window opens fullscreen
 - [x] `node --test` still passes
 
 ## Comments
@@ -18,3 +18,5 @@
 - **Not verified:** that the installed window opens fullscreen. Headless Edge has no `PWA.install`/`PWA.launch` protocol methods, so nobody has installed it yet. That's why the installability checkbox stays unticked. Check it by hand: in desktop Chrome or Edge, open `http://localhost:8000/`, install it, and confirm the window opens fullscreen on the menu. The Silk check is in the DESIGN.md tablet checklist.
 - The service worker is registered on the local dev server too. It passes requests through and there's no hot reload to interfere with, so it doesn't get in the way.
 - Added a manifest `id` of `/` so the app's identity stays the same if `start_url` ever changes.
+
+**2026-11-08:** Dad installed the live Arcade from desktop Edge (https://trevordobrinska.github.io/) and confirmed the installed window opens fullscreen on the menu. All boxes ticked.
