@@ -4,11 +4,11 @@
 
 **Blocked by:** 02 (can run alongside 03)
 
-**Status:** ready-for-agent
+**Status:** resolved
 
-- [ ] No slug: the check runs for every Game in the Games list (Ready, Test and Coming-soon entries alike) and prints one grid row per Game
-- [ ] Git facts per Game: branches not merged into the default branch (with commit counts), unpushed commits, untracked files, extra worktrees and whether each is merged
-- [ ] Git findings become "for you" items (what to do, e.g. "merge X", "remove merged worktree Y") and never fail a check
-- [ ] The report ends with the manual tablet list: house button and system Back both return to the Arcade
-- [ ] `node --test`: git findings produce "for you" items and leave every check passing; a sweep returns one row per Game
-- [ ] Real run lists whatever housekeeping is open at the time (on 2026-11-08 that was Doodle Monsters' untracked handoff note and leftover worktrees)
+- [x] No slug: the check runs for every Game in the Games list (Ready, Test and Coming-soon entries alike) and prints one grid row per Game
+- [x] Git facts per Game: branches not merged into the default branch (with commit counts), unpushed commits, untracked files, extra worktrees and whether each is merged
+- [x] Git findings become "for you" items (what to do, e.g. "merge X", "remove merged worktree Y") and never fail a check
+- [x] The report ends with the manual tablet list: house button and system Back both return to the Arcade
+- [x] `node --test`: git findings produce "for you" items and leave every check passing; a sweep returns one row per Game
+- [x] Real run lists whatever housekeeping is open at the time (on 2026-11-08 that was Doodle Monsters' untracked handoff note and leftover worktrees)

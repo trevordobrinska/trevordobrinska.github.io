@@ -4,13 +4,13 @@
 
 **Blocked by:** None (can start immediately)
 
-**Status:** ready-for-agent
+**Status:** resolved
 
-- [ ] The Ready check module is a pure function from facts about Games to a verdict, with no I/O, in the same style as the Menu module
-- [ ] Checks in this ticket: live page `/<slug>/` loads (200); `icon-512.png` loads (200); the icon is a PNG of exactly 512×512 (signature + IHDR, read the way `test/manifest.test.js` does)
-- [ ] Each failed check produces a ticket draft (title, what to build, acceptance criteria) that cites the suite rule it breaks
-- [ ] Fact gathering uses Node built-ins only (the Arcade has no dependencies)
-- [ ] The report prints the grid first, then the ticket drafts
-- [ ] `node --test` covers the module with hand-built facts: a Game meeting every check passes; a 404 icon fails "icon loads"; a wrong-sized icon fails "icon 512×512"; each failure drafts exactly one ticket
-- [ ] Real run: Doodle Monsters fails "icon loads"; Secret Script Studio passes all three
-- [ ] `CLAUDE.md`'s Code list mentions the check and how to run it
+- [x] The Ready check module is a pure function from facts about Games to a verdict, with no I/O, in the same style as the Menu module
+- [x] Checks in this ticket: live page `/<slug>/` loads (200); `icon-512.png` loads (200); the icon is a PNG of exactly 512×512 (signature + IHDR, read the way `test/manifest.test.js` does)
+- [x] Each failed check produces a ticket draft (title, what to build, acceptance criteria) that cites the suite rule it breaks
+- [x] Fact gathering uses Node built-ins only (the Arcade has no dependencies)
+- [x] The report prints the grid first, then the ticket drafts
+- [x] `node --test` covers the module with hand-built facts: a Game meeting every check passes; a 404 icon fails "icon loads"; a wrong-sized icon fails "icon 512×512"; each failure drafts exactly one ticket
+- [x] Real run: Doodle Monsters fails "icon loads"; Secret Script Studio passes all three
+- [x] `CLAUDE.md`'s Code list mentions the check and how to run it
