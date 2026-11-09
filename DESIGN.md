@@ -31,7 +31,30 @@ Every Game's home screen has a small house button linking to the Arcade (`/`). T
 
 ## Timing
 - **Go live before the next tablet session**, even if the only Tiles are Coming-soon and Test Tiles, so the very first install on each tablet is the Arcade.
-- The Games learn about all this through handoff notes in their `.scratch/` folders (written 2026-11-08). Each Game's own session turns its note into tickets and updates its own DESIGN.md.
+- Suite rule changes reach each Game as tickets filed in its own repo (see Game lifecycle). The handoff notes written 2026-11-08 are retired; see [ADR 0002](docs/adr/0002-rules-from-first-commit-tickets-not-handoffs.md).
+
+## Game lifecycle
+A Game is an Arcade Game **from its first commit**. Joining the Arcade is one line in the Games list, after a Ready check.
+
+```
+idea-board pitch
+   │
+1. START     copy the Arcade's starter into Projects\<slug>\ (NEW-GAME.md);
+   │         Dad runs `gh repo create`. Suite rules already met.
+2. GRILL     DESIGN.md / GLOSSARY / spec + tickets, as now
+3. BUILD     every push deploys to /<slug>/ (no Tile, so the kids can't reach it)
+4. TABLET    temporary Test Tile for play-test sessions
+5. READY     Arcade session runs the Ready check → pass → Dad's call → "ready"
+   │         in the Games list.  fail → tickets filed in the Game's repo
+6. LIVE      later changes just push; the Tile already points there
+```
+
+- **The Arcade never fixes a Game.** Ready check failures become tickets in the Game's own `.scratch/arcade/issues/`. A failed check keeps the Game off Ready until those tickets are done.
+- **Housekeeping is Dad's.** Unmerged branches, leftover worktrees and stray files go on Dad's "for you" list. The Arcade reports them and never does them.
+- **No handoff notes.** When `SUITE-RULES.md` changes, the Arcade session files a ticket straight into each Game's repo.
+- **Sweeps:** the Ready check runs across every Game when Dad asks, and whenever `SUITE-RULES.md` changes.
+- **Coming-soon Tiles are Dad's call per Game.** The default is no Tile until Ready.
+- Doodle Monsters and Secret Script Studio keep their Tiles. The first run of the check files their catch-up tickets.
 
 ## Tablet checklist (run first, at whichever Game's tablet session comes first)
 - [x] Approving `trevordobrinska.github.io` in the Parent Dashboard also lets the Games' sub-addresses open
