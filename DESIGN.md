@@ -33,8 +33,8 @@ Every Game's home screen has a small house button linking to the Arcade (`/`). T
 - The Games learn about all this through handoff notes in their `.scratch/` folders (written 2026-11-08). Each Game's own session turns its note into tickets and updates its own DESIGN.md.
 
 ## Tablet checklist (run first, at whichever Game's tablet session comes first)
-- [ ] Approving `trevordobrinska.github.io` in the Parent Dashboard also lets the Games' sub-addresses open
-- [ ] Silk in a Kids profile can install the Arcade to the home screen
-- [ ] Tapping a Tile opens the Game inside the fullscreen Arcade window (not a browser tab)
-- [ ] Back (system Back and the house button) returns to the Arcade
+- [x] Approving `trevordobrinska.github.io` in the Parent Dashboard also lets the Games' sub-addresses open
+- [ ] Silk in a Kids profile can install the Arcade to the home screen: **failed 2026-11-08**, the Kids profile has no option for it (see `.scratch/arcade-v1/issues/05-kids-profile-no-home-screen.md`)
+- [ ] Tapping a Tile opens the Game inside the fullscreen Arcade window (not a browser tab): the Tile opens the page, but there's no Arcade window without the install (see 05)
+- [x] Back (system Back and the house button) returns to the Arcade: system Back passed 2026-11-08; the house button can't be checked until a Game has one
 - [ ] Repeat on the son's tablet (model still unknown)
