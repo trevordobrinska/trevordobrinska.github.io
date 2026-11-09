@@ -15,4 +15,8 @@
 export const games = [
   { slug: "doodle-monsters", name: "Doodle Monsters", state: "coming-soon" },
   { slug: "secret-script-studio", name: "Secret Script Studio", state: "coming-soon" },
+
+  // Test Tiles for the first tablet session (ticket 04). Remove after it.
+  { slug: "doodle-monsters", name: "Doodle Monsters Night 1", state: "test", path: "night1/" },
+  { slug: "secret-script-studio", name: "Secret Script Studio Test", state: "test", path: "tablet-test.html" },
 ];

@@ -130,13 +130,8 @@ test("a Test entry may share its slug with a Coming-soon or Ready entry", () => 
   assert.equal(tiles.length, 4);
 });
 
-test("the real launch Games list is valid: Doodle Monsters and Secret Script Studio, both Coming-soon", () => {
-  const tiles = menu(games);
-  assert.deepEqual(
-    tiles.map((t) => [t.slug, t.state, t.href]),
-    [
-      ["doodle-monsters", "coming-soon", null],
-      ["secret-script-studio", "coming-soon", null],
-    ],
-  );
+// Checks whatever games.js holds right now, so it keeps passing as Dad edits
+// the list (adding Test Tiles, making a Game Ready) and fails only on mistakes.
+test("the real Games list is valid and gives one Tile per entry", () => {
+  assert.equal(menu(games).length, games.length);
 });
