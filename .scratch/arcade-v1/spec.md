@@ -1,6 +1,6 @@
 # Spec: Dobrinska Arcade V1 (the first live home page)
 
-Status: ready-for-agent
+Status: resolved (2026-11-08: tickets 01–04 done, 05 closed as a false alarm; both Games Ready)
 
 Sources: `DESIGN.md` (grilled 2026-11-07 and 2026-11-08), `GLOSSARY.md` (Dobrinska Arcade, Game, Tile, Coming-soon Tile, Ready), `SUITE-RULES.md`, and ADR 0001 (separate repos, one origin). Where this spec and DESIGN.md disagree, DESIGN.md wins: flag it, don't silently pick.
 

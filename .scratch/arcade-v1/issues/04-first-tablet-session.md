@@ -4,16 +4,16 @@
 
 **Blocked by:** 03
 
-**Status:** ready-for-human
+**Status:** resolved
 
 - [x] Before the session: add a Test Tile for each test page being used that day (`/doodle-monsters/night1/` and/or `/secret-script-studio/tablet-test.html`) and push
 - [x] Approving `trevordobrinska.github.io` in the Parent Dashboard also lets the Games' sub-addresses open
-- [ ] Silk in the Kids profile installs the Arcade to the home screen (failed, see 05)
-- [ ] Tapping a Tile opens the page inside the fullscreen Arcade window, not a browser tab (no Arcade window without the install, see 05)
+- [x] Silk in the Kids profile installs the Arcade to the home screen (done through the allowed site's icon in **My Stuff**, not Silk's install; see Comments)
+- [x] Tapping a Tile opens the page inside the fullscreen Arcade window, not a browser tab
 - [x] System Back (and the house button, once a Game has one) returns to the Arcade
 - [x] Results recorded under `## Comments` here and DESIGN.md's checklist ticked; anything that fails becomes a new ticket
-- [ ] After the session: Test Tiles removed and pushed
-- [ ] Repeated on the son's tablet once its model is known (may be a later session)
+- [x] After the session: Test Tiles removed and pushed
+- [x] Repeated on the son's tablet once its model is known (may be a later session)
 
 ## Comments
 
@@ -24,4 +24,6 @@
 - **Tile → page: passed.** Tapping a Test Tile opened its page, which means the one approval also covers the Games' sub-addresses. There's no fullscreen Arcade window to check without the install.
 - **System Back: passed.** It returned to the Arcade menu. The house button can't be checked yet because no Game has one.
 
-Still open: remove the Test Tiles after the session, and repeat on the son's tablet once its model is known.
+**Correction, same night:** Dad found the way onto the home screen. A site on the Parent Dashboard's allowed list appears as an icon in the kid's **My Stuff** folder on the home screen, and it opens fullscreen with no address bar. So "add to home screen: failed" above was wrong, and ticket 05 is closed as a false alarm.
+
+**Both tablets, 2026-11-08:** Both first-night sessions are done on both tablets, and the Arcade is on both home screens. Dad noted only minor comments, which belong to the Games and are recorded in their own repos. After the session the Test Tiles were removed, and Doodle Monsters and Secret Script Studio became Ready (Dad's call).

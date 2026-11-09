@@ -17,6 +17,7 @@ One home page where both kids find every Game Dad builds. Each kid opens it on t
 ## Installing
 - **Only the Arcade goes on each tablet's home screen.** Games open inside the Arcade's fullscreen window. Games may keep their own manifests, but nobody installs them.
 - Approve `trevordobrinska.github.io` once in the Amazon Kids Parent Dashboard.
+- **How it gets onto the home screen (found 2026-11-08):** a site on a Kids profile's allowed list shows up as an icon in the kid's **My Stuff** folder on the home screen, and it opens fullscreen with no address bar. That icon is the Arcade's install. Nothing is installed from Silk.
 
 ## The menu
 - One screen of big **Tiles**, scrolling vertically as Games are added. Each Tile shows the Game's icon and name.
@@ -34,7 +35,7 @@ Every Game's home screen has a small house button linking to the Arcade (`/`). T
 
 ## Tablet checklist (run first, at whichever Game's tablet session comes first)
 - [x] Approving `trevordobrinska.github.io` in the Parent Dashboard also lets the Games' sub-addresses open
-- [ ] Silk in a Kids profile can install the Arcade to the home screen: **failed 2026-11-08**, the Kids profile has no option for it (see `.scratch/arcade-v1/issues/05-kids-profile-no-home-screen.md`)
-- [ ] Tapping a Tile opens the Game inside the fullscreen Arcade window (not a browser tab): the Tile opens the page, but there's no Arcade window without the install (see 05)
-- [x] Back (system Back and the house button) returns to the Arcade: system Back passed 2026-11-08; the house button can't be checked until a Game has one
-- [ ] Repeat on the son's tablet (model still unknown)
+- [x] The Arcade gets onto a Kids profile's home screen: not through Silk's install, but as the allowed site's icon in **My Stuff**, which opens fullscreen (2026-11-08)
+- [x] Tapping a Tile opens the Game inside the fullscreen Arcade window (not a browser tab)
+- [x] Back (system Back and the house button) returns to the Arcade: system Back passed 2026-11-08
+- [x] Repeat on the son's tablet: done 2026-11-08; the Arcade is on both tablets' home screens
