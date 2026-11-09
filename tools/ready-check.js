@@ -7,7 +7,7 @@
 
 import { games } from "../games.js";
 import { readyCheck } from "./ready-check/check.js";
-import { gatherFacts } from "./ready-check/gather.js";
+import { gatherFacts, starterIcon } from "./ready-check/gather.js";
 import { report } from "./ready-check/report.js";
 import { readFileSync } from "node:fs";
 
@@ -19,6 +19,8 @@ const slugs = args.length ? args : [...new Set(games.map((g) => g.slug))];
 
 const facts = [];
 for (const slug of slugs) facts.push(await gatherFacts(slug));
-const verdict = readyCheck(facts, { exceptions });
+// A Game still publishing the starter's placeholder icon isn't Ready.
+const placeholderIcons = [starterIcon().sha256];
+const verdict = readyCheck(facts, { exceptions, placeholderIcons });
 console.log(report(verdict));
 process.exitCode = verdict.games.every((g) => g.passes) ? 0 : 1;

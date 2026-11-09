@@ -1,13 +1,14 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readyCheck } from "../tools/ready-check/check.js";
+import { gatherFacts, STARTER, starterIcon } from "../tools/ready-check/gather.js";
 
 // Facts about a Game that meets every check. Each test breaks one thing.
 function goodGame(slug = "doodle-monsters") {
   return {
     slug,
     page: { status: 200 },
-    icon: { status: 200, png: { width: 512, height: 512 } },
+    icon: { status: 200, png: { width: 512, height: 512 }, sha256: "a1".repeat(32) },
     source: {
       storage: [
         { kind: "indexedDB", name: slug, file: "src/storage.ts", line: 3 },
@@ -30,6 +31,7 @@ test("a Game meeting every check passes the Ready check with no ticket drafts", 
     "live page": "pass",
     "icon loads": "pass",
     "icon 512×512": "pass",
+    "icon not placeholder": "pass",
     "storage prefixed": "pass",
     "link home": "pass",
     "service worker scope": "pass",
@@ -46,6 +48,7 @@ test('a 404 Tile icon fails "icon loads", skips the size check, and drafts one t
     "live page": "pass",
     "icon loads": "fail",
     "icon 512×512": "skip",
+    "icon not placeholder": "skip",
     "storage prefixed": "pass",
     "link home": "pass",
     "service worker scope": "pass",
@@ -74,6 +77,7 @@ test('a wrong-sized or non-PNG Tile icon fails "icon 512×512" alone and drafts 
       "live page": "pass",
       "icon loads": "pass",
       "icon 512×512": "fail",
+      "icon not placeholder": "pass",
       "storage prefixed": "pass",
       "link home": "pass",
       "service worker scope": "pass",
@@ -89,6 +93,35 @@ test('a wrong-sized or non-PNG Tile icon fails "icon 512×512" alone and drafts 
   }
 });
 
+test('a Tile icon that is still the starter placeholder fails "icon not placeholder" alone, even though it is 512×512', () => {
+  const placeholder = "5e".repeat(32);
+  const facts = goodGame("glyph-mines");
+  facts.icon = { status: 200, png: { width: 512, height: 512 }, sha256: placeholder };
+  const [game] = readyCheck([facts], { placeholderIcons: [placeholder] }).games;
+  assert.deepEqual(statuses(game), {
+    "live page": "pass",
+    "icon loads": "pass",
+    "icon 512×512": "pass",
+    "icon not placeholder": "fail",
+    "storage prefixed": "pass",
+    "link home": "pass",
+    "service worker scope": "pass",
+  });
+  assert.equal(game.passes, false);
+  assert.equal(game.tickets.length, 1);
+  const [ticket] = game.tickets;
+  assert.equal(ticket.check, "icon not placeholder");
+  assert.equal(ticket.rule, 4);
+  assert.match(ticket.whatToBuild, /\/glyph-mines\/icon-512\.png/);
+  assert.match(ticket.whatToBuild, /placeholder/);
+  assert.ok(ticket.acceptance.length > 0);
+});
+
+test('a real Tile icon passes "icon not placeholder"', () => {
+  const [game] = readyCheck([goodGame()], { placeholderIcons: ["5e".repeat(32)] }).games;
+  assert.equal(statuses(game)["icon not placeholder"], "pass");
+});
+
 test('a live page that doesn\'t load fails "live page" alone and drafts one ticket citing rule 1', () => {
   const facts = goodGame("glyph-mines");
   facts.page = { status: 404 };
@@ -97,6 +130,7 @@ test('a live page that doesn\'t load fails "live page" alone and drafts one tick
     "live page": "fail",
     "icon loads": "pass",
     "icon 512×512": "pass",
+    "icon not placeholder": "pass",
     "storage prefixed": "pass",
     "link home": "pass",
     "service worker scope": "pass",
@@ -127,6 +161,7 @@ test('unprefixed storage fails "storage prefixed" alone and drafts one ticket ci
       "live page": "pass",
       "icon loads": "pass",
       "icon 512×512": "pass",
+      "icon not placeholder": "pass",
       "storage prefixed": "fail",
       "link home": "pass",
       "service worker scope": "pass",
@@ -175,6 +210,7 @@ test('a Game with no link to the site root fails "link home" alone and drafts on
     "live page": "pass",
     "icon loads": "pass",
     "icon 512×512": "pass",
+    "icon not placeholder": "pass",
     "storage prefixed": "pass",
     "link home": "fail",
     "service worker scope": "pass",
@@ -196,6 +232,7 @@ test('a service worker registered at the site root fails "service worker scope" 
     "live page": "pass",
     "icon loads": "pass",
     "icon 512×512": "pass",
+    "icon not placeholder": "pass",
     "storage prefixed": "pass",
     "link home": "pass",
     "service worker scope": "fail",
@@ -273,4 +310,20 @@ test("a sweep returns one row per Game and one manual tablet list for house butt
     assert.match(item.steps, /Arcade/);
     assert.ok(item.ticket.title && item.ticket.whatToBuild && item.ticket.acceptance.length > 0);
   }
+});
+
+// The starter, checked through the same seam: a Game copied from it starts out
+// meeting every source rule, and only its placeholder Tile icon keeps it from passing.
+test('the starter meets every source check, and its placeholder Tile icon fails "icon not placeholder"', async () => {
+  const facts = await gatherFacts(STARTER.slug, { folder: STARTER.folder, localOnly: true });
+  assert.ok(facts.source.storage.length > 0, "the starter uses its storage helper");
+  assert.equal(facts.git, undefined, "local-only mode reads no repo state");
+  const [game] = readyCheck([facts], { placeholderIcons: [starterIcon().sha256] }).games;
+  const status = statuses(game);
+  assert.equal(status["storage prefixed"], "pass");
+  assert.equal(status["link home"], "pass");
+  assert.equal(status["service worker scope"], "pass");
+  assert.equal(status["icon loads"], "pass");
+  assert.equal(status["icon 512×512"], "pass");
+  assert.equal(status["icon not placeholder"], "fail");
 });

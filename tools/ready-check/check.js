@@ -4,9 +4,13 @@
 // Facts about one Game (gather.js builds these; tests build them by hand):
 //   slug   the Game's slug, e.g. "doodle-monsters"
 //   page   { status }       HTTP status of the live page /<slug>/
-//   icon   { status, png }  HTTP status of /<slug>/icon-512.png, and
+//   icon   { status, png, sha256 }  HTTP status of /<slug>/icon-512.png;
 //                           png: { width, height } read from its IHDR, or
-//                           null if the bytes aren't a PNG (or didn't load)
+//                           null if the bytes aren't a PNG (or didn't load);
+//                           sha256: hex hash of its bytes, null if no bytes
+//   (local-only facts, e.g. the starter's: page { status: null } as nothing
+//   was fetched; icon read from the folder's public/icon-512.png, status 200
+//   if it's there, 404 if not)
 //   source what the Game's own source says (read from its local repo):
 //     storage         [{ kind, name, file, line }] each saved-data name found:
 //                     kind "indexedDB", "localStorage" or "cache"; name is the
@@ -28,6 +32,9 @@
 //   exceptions  [{ slug, name, why }] accepted rule 2 exceptions: that Game
 //               may use that exact unprefixed storage name (e.g. a throwaway
 //               test page). Kept as data next to the CLI, not in this logic.
+//   placeholderIcons  [sha256 hex] icons that are still a placeholder (the
+//               starter's); a Game whose icon hashes to one fails
+//               "icon not placeholder". The CLI passes the starter's.
 //
 // Verdict: { games, tabletList }
 //   games       one entry per Game, in the order given:
@@ -104,6 +111,24 @@ const CHECKS = [
       acceptance: [
         "https://trevordobrinska.github.io/" + facts.slug + "/icon-512.png is a PNG of exactly 512×512",
         "The Game's Tile in the Arcade shows the picture undistorted",
+      ],
+    }),
+  },
+  {
+    name: "icon not placeholder",
+    rule: 4,
+    needs: ["icon loads"],
+    judge: (facts, options) => !options.placeholderIcons.includes(facts.icon.sha256),
+    ticket: (facts) => ({
+      title: "Draw real Tile art for the icon",
+      whatToBuild:
+        "/" + facts.slug + "/icon-512.png is still the starter's placeholder picture, so the " +
+        "Game's Tile wouldn't show the kids what the Game is. Replace public/icon-512.png with " +
+        "the Game's own square 512×512 PNG (suite rule 4).",
+      acceptance: [
+        "https://trevordobrinska.github.io/" + facts.slug + "/icon-512.png shows the Game's own picture",
+        "It is a PNG of exactly 512×512",
+        "The Ready check's \"icon not placeholder\" passes",
       ],
     }),
   },
@@ -230,8 +255,8 @@ function describeStorage(s) {
   return s.kind + " " + what + " at " + s.file + ":" + s.line;
 }
 
-export function readyCheck(gamesFacts, { exceptions = [] } = {}) {
-  const options = { exceptions };
+export function readyCheck(gamesFacts, { exceptions = [], placeholderIcons = [] } = {}) {
+  const options = { exceptions, placeholderIcons };
   return { games: gamesFacts.map((facts) => checkGame(facts, options)), tabletList: TABLET_LIST };
 }
 

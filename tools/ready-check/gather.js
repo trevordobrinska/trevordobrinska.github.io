@@ -3,9 +3,11 @@
 // local repo (gather-source.js). Node built-ins only. Read-only.
 
 import { execFileSync } from "node:child_process";
-import { existsSync } from "node:fs";
+import { createHash } from "node:crypto";
+import { existsSync, readFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { gatherSource } from "./gather-source.js";
 
 export const SITE = "https://trevordobrinska.github.io";
@@ -14,9 +16,26 @@ export const SITE = "https://trevordobrinska.github.io";
 // place, so a run from an Arcade worktree still finds them).
 export const PROJECTS = join(homedir(), "Projects");
 
-// Facts about one Game, in the shape check.js documents.
-export async function gatherFacts(slug, { projects = PROJECTS } = {}) {
-  const source = gatherSource(join(projects, slug), slug);
+// The starter (in this repo, next to SUITE-RULES.md) and the slug placeholder
+// that NEW-GAME.md replaces when a Game is copied from it.
+export const STARTER = {
+  folder: fileURLToPath(new URL("../../starter/", import.meta.url)),
+  slug: "game-slug",
+};
+
+// The starter's placeholder Tile icon: { status, png, sha256 }. A Game still
+// publishing these bytes fails "icon not placeholder".
+export function starterIcon() {
+  return localIcon(STARTER.folder);
+}
+
+// Facts about one Game, in the shape check.js documents. The Game's source is
+// read from `folder` (default Projects\<slug>\). With `localOnly`, nothing is
+// fetched and git isn't read: the page is { status: null }, the icon is the
+// folder's public/icon-512.png, and `git` is left out (used for the starter).
+export async function gatherFacts(slug, { projects = PROJECTS, folder = join(projects, slug), localOnly = false } = {}) {
+  const source = gatherSource(folder, slug);
+  if (localOnly) return { slug, page: { status: null }, icon: localIcon(folder), source };
   const root = SITE + "/" + slug + "/";
   const page = await fetch(root);
   const icon = await fetch(root + "icon-512.png");
@@ -24,10 +43,22 @@ export async function gatherFacts(slug, { projects = PROJECTS } = {}) {
   return {
     slug,
     page: { status: page.status },
-    icon: { status: icon.status, png: iconBytes && pngSize(iconBytes) },
+    icon: { status: icon.status, ...iconFacts(iconBytes) },
     source,
-    git: gitFacts(join(projects, slug)),
+    git: gitFacts(folder),
   };
+}
+
+// The Tile icon a folder would publish (Vite copies public/ to the build root).
+function localIcon(folder) {
+  const path = join(folder, "public", "icon-512.png");
+  if (!existsSync(path)) return { status: 404, png: null, sha256: null };
+  return { status: 200, ...iconFacts(readFileSync(path)) };
+}
+
+function iconFacts(bytes) {
+  if (bytes === null) return { png: null, sha256: null };
+  return { png: pngSize(bytes), sha256: createHash("sha256").update(bytes).digest("hex") };
 }
 
 // Git state of a Game's local repo, or null if there isn't one. Read-only git
