@@ -3,7 +3,8 @@
 //
 // Facts about one Game (gather.js builds these; tests build them by hand):
 //   slug   the Game's slug, e.g. "doodle-monsters"
-//   page   { status }       HTTP status of the live page /<slug>/
+//   page   { status }       HTTP status of the live page /<slug>/, null when
+//                           not fetched (local-only): "live page" isn't judged
 //   icon   { status, png, sha256 }  HTTP status of /<slug>/icon-512.png;
 //                           png: { width, height } read from its IHDR, or
 //                           null if the bytes aren't a PNG (or didn't load);
@@ -11,7 +12,8 @@
 //   (local-only facts, e.g. the starter's: page { status: null } as nothing
 //   was fetched; icon read from the folder's public/icon-512.png, status 200
 //   if it's there, 404 if not)
-//   source what the Game's own source says (read from its local repo):
+//   source what the Game's own source says (read from its local repo), or
+//          null when there is no local repo (the source checks aren't judged):
 //     storage         [{ kind, name, file, line }] each saved-data name found:
 //                     kind "indexedDB", "localStorage" or "cache"; name is the
 //                     literal name (or its fixed start, for "night1:verdict:" +
@@ -22,11 +24,13 @@
 //                     (e.g. "/secret-script-studio/"), or null if unreadable
 //   git    the Game's local repo at Projects\<slug>\, null if there is none,
 //          or left out when not gathered (no "for you" items then):
-//            defaultBranch     e.g. "main"
+//            defaultBranch     e.g. "main", null if none was found
 //            unmergedBranches  [{ name, commits }] commits not on the default
 //            unpushed          [{ branch, commits }] commits not on its upstream
 //            untracked         [paths] untracked, not ignored
 //            worktrees         [{ path, branch, merged }] extra worktrees
+//            problems          [descriptions] git lookups that couldn't be
+//                              read (each becomes a "for you" item)
 //
 // Options (second argument to readyCheck):
 //   exceptions  [{ slug, name, why }] accepted rule 2 exceptions: that Game
@@ -35,12 +39,17 @@
 //   placeholderIcons  [sha256 hex] icons that are still a placeholder (the
 //               starter's); a Game whose icon hashes to one fails
 //               "icon not placeholder". The CLI passes the starter's.
+//   slugs       every Game's slug (the Games list). A storage name a longer
+//               slug also claims, e.g. "glyph-mines-save" for "glyph" when
+//               "glyph-mines" is a Game, is that Game's, not this one's. The
+//               slugs of the Games being checked are always included.
 //
 // Verdict: { games, tabletList }
 //   games       one entry per Game, in the order given:
 //     slug      the Game's slug
 //     checks    [{ name, rule, status }] in grid order; status is "pass",
-//               "fail", or "skip" (not judged because a check it needs failed)
+//               "fail", or "skip" (not judged: a check it needs didn't pass,
+//               or the facts it reads weren't gathered)
 //     passes    true when every check passes. Ready is still Dad's call.
 //     tickets   one draft per failed check: { check, rule, title, whatToBuild,
 //               acceptance: [criteria] }
@@ -52,15 +61,19 @@
 // The checks, in grid order. Adding a check is one entry here. Each one:
 //   name     the grid column, and how tickets refer to it
 //   rule     the SUITE-RULES.md rule number it enforces
+//   reads    the fact it judges ("page", "icon" or "source"); it's skipped
+//            when that fact wasn't gathered (see GATHERED)
 //   needs    names of checks that must pass first, or it's skipped
-//   judge    (facts, options) => true when the Game meets the check
-//   ticket   (facts, options) => { title, whatToBuild, acceptance } on failure
+//   find     (facts, options) => [what breaks the check]; passes when empty
+//   ticket   (facts, found) => { title, whatToBuild, acceptance } on failure,
+//            given the list `find` returned
 const CHECKS = [
   {
     name: "live page",
     rule: 1,
+    reads: "page",
     needs: [],
-    judge: (facts) => facts.page.status === 200,
+    find: (facts) => (facts.page.status === 200 ? [] : [facts.page.status]),
     ticket: (facts) => ({
       title: "Publish the Game at /" + facts.slug + "/",
       whatToBuild:
@@ -77,8 +90,9 @@ const CHECKS = [
   {
     name: "icon loads",
     rule: 4,
+    reads: "icon",
     needs: [],
-    judge: (facts) => facts.icon.status === 200,
+    find: (facts) => (facts.icon.status === 200 ? [] : [facts.icon.status]),
     ticket: (facts) => ({
       title: "Publish a Tile icon at /" + facts.slug + "/icon-512.png",
       whatToBuild:
@@ -96,9 +110,12 @@ const CHECKS = [
   {
     name: "icon 512×512",
     rule: 4,
+    reads: "icon",
     needs: ["icon loads"],
-    judge: (facts) =>
-      facts.icon.png !== null && facts.icon.png.width === 512 && facts.icon.png.height === 512,
+    find: (facts) =>
+      facts.icon.png !== null && facts.icon.png.width === 512 && facts.icon.png.height === 512
+        ? []
+        : [facts.icon.png],
     ticket: (facts) => ({
       title: "Make the Tile icon a 512×512 PNG",
       whatToBuild:
@@ -117,8 +134,9 @@ const CHECKS = [
   {
     name: "icon not placeholder",
     rule: 4,
+    reads: "icon",
     needs: ["icon loads"],
-    judge: (facts, options) => !options.placeholderIcons.includes(facts.icon.sha256),
+    find: (facts, options) => (options.placeholderIcons.includes(facts.icon.sha256) ? [facts.icon.sha256] : []),
     ticket: (facts) => ({
       title: "Draw real Tile art for the icon",
       whatToBuild:
@@ -135,15 +153,16 @@ const CHECKS = [
   {
     name: "storage prefixed",
     rule: 2,
+    reads: "source",
     needs: [],
-    judge: (facts, options) => unprefixedStorage(facts, options).length === 0,
-    ticket: (facts, options) => ({
+    find: unprefixedStorage,
+    ticket: (facts, unprefixed) => ({
       title: "Start every saved-data name with " + facts.slug,
       whatToBuild:
         "Every Game shares one browser origin, so IndexedDB database names, localStorage keys " +
         "and cache names must all start with \"" + facts.slug + "\" (suite rule 2). The source has " +
         "names that don't, or that the Ready check can't read: " +
-        unprefixedStorage(facts, options).map(describeStorage).join("; ") + ". " +
+        unprefixed.map(describeStorage).join("; ") + ". " +
         "Rename them (keeping the kids' existing saves, e.g. by copying old data across once), " +
         "and write each name as a string literal or a constant so the check can read it.",
       acceptance: [
@@ -157,8 +176,9 @@ const CHECKS = [
   {
     name: "link home",
     rule: 5,
+    reads: "source",
     needs: [],
-    judge: (facts) => facts.source.linksHome.length > 0,
+    find: (facts) => (facts.source.linksHome.length > 0 ? [] : ["no link to /"]),
     ticket: () => ({
       title: "Add a house button back to the Arcade",
       whatToBuild:
@@ -175,15 +195,16 @@ const CHECKS = [
   {
     name: "service worker scope",
     rule: 3,
+    reads: "source",
     needs: [],
-    judge: (facts) => strayWorkers(facts).length === 0,
-    ticket: (facts) => ({
+    find: strayWorkers,
+    ticket: (facts, stray) => ({
       title: "Keep the service worker inside /" + facts.slug + "/",
       whatToBuild:
         "Every Game shares one origin with the Arcade, so a Game's service worker must be scoped " +
         "to its own path /" + facts.slug + "/ and never claim the site root (suite rule 3). " +
         "These registrations could reach outside it, or their scope can't be read: " +
-        strayWorkers(facts)
+        stray
           .map((w) => w.file + ":" + w.line + " (scope " + (w.scope === null ? "unreadable" : w.scope) + ")")
           .join("; ") +
         ". Register the worker from a relative URL inside the Game's path (e.g. " +
@@ -196,6 +217,14 @@ const CHECKS = [
     }),
   },
 ];
+
+// Whether a fact was gathered: a page not fetched (local-only) or a source with
+// no local repo leaves the checks that read it not judged.
+const GATHERED = {
+  page: (facts) => facts.page.status !== null,
+  icon: () => true,
+  source: (facts) => facts.source !== null,
+};
 
 // Service worker registrations whose scope isn't inside /<slug>/.
 function strayWorkers(facts) {
@@ -239,15 +268,23 @@ const TABLET_LIST = [
   },
 ];
 
-// Storage names that break rule 2: not starting with the slug, unreadable,
-// and not an accepted exception for this Game.
+// Storage names that break rule 2: unreadable, or not this Game's (see
+// ownsName), and not an accepted exception for this Game.
 function unprefixedStorage(facts, options) {
   const excused = new Set(
     options.exceptions.filter((e) => e.slug === facts.slug).map((e) => e.name),
   );
   return facts.source.storage.filter(
-    (s) => s.name === null || (!s.name.startsWith(facts.slug) && !excused.has(s.name)),
+    (s) => s.name === null || (!ownsName(facts.slug, s.name, options.slugs) && !excused.has(s.name)),
   );
+}
+
+// A name is this Game's when it is the slug, or the slug followed by a
+// separator (any character but a letter or digit: ":", "-", "/", ...), and no
+// longer Game slug also claims it ("glyph-mines-save" is glyph-mines', not glyph's).
+function ownsName(slug, name, slugs) {
+  const claims = (s) => name === s || (name.startsWith(s) && /^[^a-z0-9]/i.test(name.slice(s.length)));
+  return claims(slug) && !slugs.some((other) => other.length > slug.length && claims(other));
 }
 
 function describeStorage(s) {
@@ -255,8 +292,8 @@ function describeStorage(s) {
   return s.kind + " " + what + " at " + s.file + ":" + s.line;
 }
 
-export function readyCheck(gamesFacts, { exceptions = [], placeholderIcons = [] } = {}) {
-  const options = { exceptions, placeholderIcons };
+export function readyCheck(gamesFacts, { exceptions = [], placeholderIcons = [], slugs = [] } = {}) {
+  const options = { exceptions, placeholderIcons, slugs: [...slugs, ...gamesFacts.map((f) => f.slug)] };
   return { games: gamesFacts.map((facts) => checkGame(facts, options)), tabletList: TABLET_LIST };
 }
 
@@ -265,14 +302,16 @@ function checkGame(facts, options) {
   const checks = [];
   const tickets = [];
   CHECKS.forEach((check) => {
-    if (check.needs.some((name) => status[name] !== "pass")) {
+    let found = [];
+    if (!GATHERED[check.reads](facts) || check.needs.some((name) => status[name] !== "pass")) {
       status[check.name] = "skip";
     } else {
-      status[check.name] = check.judge(facts, options) ? "pass" : "fail";
+      found = check.find(facts, options);
+      status[check.name] = found.length === 0 ? "pass" : "fail";
     }
     checks.push({ name: check.name, rule: check.rule, status: status[check.name] });
     if (status[check.name] === "fail") {
-      tickets.push({ check: check.name, rule: check.rule, ...check.ticket(facts, options) });
+      tickets.push({ check: check.name, rule: check.rule, ...check.ticket(facts, found) });
     }
   });
   return {
@@ -290,15 +329,26 @@ function forYou(git) {
   if (git === undefined) return [];
   if (git === null) return ["No local repo found: clone it into Projects\\ so the Ready check can see its git state"];
   const items = [];
-  git.unmergedBranches.forEach((b) =>
-    items.push("Merge " + b.name + " (" + commits(b.commits) + ") into " + git.defaultBranch));
+  // A branch checked out in an unmerged worktree gets the worktree's item only.
+  const unmerged = new Map(git.unmergedBranches.map((b) => [b.name, b.commits]));
+  const inWorktree = new Set(git.worktrees.filter((w) => !w.merged).map((w) => w.branch));
+  git.unmergedBranches
+    .filter((b) => !inWorktree.has(b.name))
+    .forEach((b) => items.push("Merge " + b.name + " (" + commits(b.commits) + ") into " + git.defaultBranch));
   git.unpushed.forEach((u) => items.push("Push " + commits(u.commits) + " on " + u.branch));
   git.untracked.forEach((file) => items.push("Commit or delete untracked " + file));
   git.worktrees.forEach((w) =>
     items.push(w.merged
       ? "Remove merged worktree " + w.path + " (" + w.branch + ")"
-      : "Merge or remove worktree " + w.path + " (" + w.branch + ", not merged)"));
+      : "Merge or remove worktree " + w.path + " (" + w.branch + ", " + notMerged(w.branch) + ")"));
+  (git.problems || []).forEach((p) => items.push("Check the repo by hand: " + p));
   return items;
+
+  function notMerged(branch) {
+    return unmerged.has(branch)
+      ? commits(unmerged.get(branch)) + " not merged into " + git.defaultBranch
+      : "not merged";
+  }
 }
 
 function commits(n) {

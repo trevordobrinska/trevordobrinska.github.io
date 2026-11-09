@@ -15,7 +15,7 @@
 import { readdirSync, readFileSync } from "node:fs";
 import { join, relative, extname } from "node:path";
 
-const SOURCE_EXTENSIONS = new Set([".js", ".mjs", ".cjs", ".ts", ".mts", ".tsx", ".jsx", ".html", ".vue", ".svelte"]);
+const SOURCE_EXTENSIONS = new Set([".js", ".mjs", ".cjs", ".ts", ".mts", ".tsx", ".jsx", ".html"]);
 // Not shipped to the kids: dependencies, build output, tooling and tests.
 const SKIP_DIRS = new Set(["node_modules", "dist", "build", "coverage", "test", "tests", "__tests__"]);
 const SKIP_FILE = /\.(test|spec)\.[a-z]+$/;

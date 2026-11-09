@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readyCheck } from "../tools/ready-check/check.js";
-import { gatherFacts, STARTER, starterIcon } from "../tools/ready-check/gather.js";
+import { gatherFacts, localIcon, STARTER } from "../tools/ready-check/gather.js";
 
 // Facts about a Game that meets every check. Each test breaks one thing.
 function goodGame(slug = "doodle-monsters") {
@@ -264,7 +264,7 @@ test('a Game with no service worker passes "service worker scope"', () => {
   assert.equal(game.passes, true);
 });
 
-test("git housekeeping in a Game's repo becomes \"for you\" items and never fails a check", () => {
+test("git housekeeping in a Game's repo becomes \"for you\" items, one per branch, and never fails a check", () => {
   const facts = goodGame();
   facts.git = {
     defaultBranch: "main",
@@ -280,21 +280,75 @@ test("git housekeeping in a Game's repo becomes \"for you\" items and never fail
   assert.equal(game.passes, true);
   assert.deepEqual(game.tickets, []);
   assert.deepEqual(game.forYou, [
-    "Merge worktree-night-1-results (1 commit) into main",
     "Push 2 commits on main",
     "Commit or delete untracked .scratch/arcade/handoff.md",
-    "Merge or remove worktree C:/Projects/doodle-monsters/.claude/worktrees/night-1 (worktree-night-1-results, not merged)",
+    "Merge or remove worktree C:/Projects/doodle-monsters/.claude/worktrees/night-1 (worktree-night-1-results, 1 commit not merged into main)",
     "Remove merged worktree C:/Projects/doodle-monsters/.claude/worktrees/old (worktree-old)",
   ]);
 });
 
-test('a Game with no local repo gets one "for you" item saying so, and still passes', () => {
+test('a Game with no local repo gets one "for you" item saying so, and its source checks are not judged', () => {
   const facts = goodGame("glyph-mines");
+  facts.source = null;
   facts.git = null;
   const [game] = readyCheck([facts]).games;
-  assert.equal(game.passes, true);
+  assert.deepEqual(statuses(game), {
+    "live page": "pass",
+    "icon loads": "pass",
+    "icon 512×512": "pass",
+    "icon not placeholder": "pass",
+    "storage prefixed": "skip",
+    "link home": "skip",
+    "service worker scope": "skip",
+  });
+  assert.equal(game.passes, false);
+  assert.deepEqual(game.tickets, []);
   assert.equal(game.forYou.length, 1);
   assert.match(game.forYou[0], /no local repo/i);
+});
+
+test("git lookups that couldn't be read become \"for you\" items, never a failed check", () => {
+  const facts = goodGame();
+  facts.git = {
+    defaultBranch: null,
+    unmergedBranches: [],
+    unpushed: [],
+    untracked: [],
+    worktrees: [],
+    problems: ["no main or master branch", "upstream origin/gone of branch old is missing"],
+  };
+  const [game] = readyCheck([facts]).games;
+  assert.equal(game.passes, true);
+  assert.equal(game.forYou.length, 2);
+  assert.match(game.forYou[0], /no main or master branch/);
+  assert.match(game.forYou[1], /origin\/gone/);
+});
+
+test('a page that was not fetched (local-only) leaves "live page" not judged', () => {
+  const facts = goodGame();
+  facts.page = { status: null };
+  const [game] = readyCheck([facts]).games;
+  assert.equal(statuses(game)["live page"], "skip");
+  assert.equal(game.passes, false);
+  assert.deepEqual(game.tickets, []);
+});
+
+test("a storage name only counts as prefixed when it is the slug, or the slug then a separator, and no other Game's slug claims it", () => {
+  const slugs = ["glyph", "glyph-mines", "doodle-monsters", "secret-script-studio"];
+  for (const [slug, name, expected] of [
+    ["doodle-monsters", "doodle-monsters", "pass"],
+    ["doodle-monsters", "doodle-monsters:hard-mode", "pass"],
+    ["secret-script-studio", "secret-script-studio-tablet-test", "pass"],
+    ["doodle-monsters", "doodle-monstersX", "fail"],
+    ["glyph", "glyph-mines-save", "fail"],
+    ["glyph", "glyph-mines", "fail"],
+    ["glyph", "glyph:save", "pass"],
+  ]) {
+    const facts = goodGame(slug);
+    facts.source.storage = [{ kind: "localStorage", name, file: "src/a.ts", line: 1 }];
+    const [game] = readyCheck([facts], { slugs }).games;
+    assert.equal(statuses(game)["storage prefixed"], expected, slug + " / " + name);
+  }
 });
 
 test("a sweep returns one row per Game and one manual tablet list for house button and Back", () => {
@@ -318,8 +372,9 @@ test('the starter meets every source check, and its placeholder Tile icon fails 
   const facts = await gatherFacts(STARTER.slug, { folder: STARTER.folder, localOnly: true });
   assert.ok(facts.source.storage.length > 0, "the starter uses its storage helper");
   assert.equal(facts.git, undefined, "local-only mode reads no repo state");
-  const [game] = readyCheck([facts], { placeholderIcons: [starterIcon().sha256] }).games;
+  const [game] = readyCheck([facts], { placeholderIcons: [localIcon(STARTER.folder).sha256] }).games;
   const status = statuses(game);
+  assert.equal(status["live page"], "skip", "local-only mode fetches no page, so it isn't judged");
   assert.equal(status["storage prefixed"], "pass");
   assert.equal(status["link home"], "pass");
   assert.equal(status["service worker scope"], "pass");

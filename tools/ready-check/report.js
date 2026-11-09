@@ -14,20 +14,16 @@ export function report(verdict) {
     const cells = game.checks.map((c) => MARK[c.status]);
     lines.push("| " + game.slug + " | " + cells.join(" | ") + " | " + (game.passes ? "yes" : "no") + " |");
   });
-  lines.push("", "pass = meets the check, FAIL = breaks it, - = not judged (a check it needs failed).");
+  lines.push("", "pass = meets the check, FAIL = breaks it, - = not judged (a check it needs didn't pass, or its facts weren't gathered).");
   lines.push("Passing is not Ready: Ready is still Dad's call.", "");
 
   const drafts = verdict.games.flatMap((game) => game.tickets.map((t) => ({ slug: game.slug, ...t })));
   lines.push("## Ticket drafts (" + drafts.length + ")", "");
   if (drafts.length === 0) lines.push("None.", "");
+  else lines.push("Skip any draft that an open ticket in the Game's repo already covers.", "");
   drafts.forEach((t) => {
-    lines.push("### For " + t.slug + "/.scratch/arcade/issues/NN-<slug>.md", "");
-    lines.push("# NN: " + t.title, "");
-    lines.push("**What to build:** " + t.whatToBuild, "");
-    lines.push("**Suite rule:** " + t.rule + " (Ready check: \"" + t.check + "\" failed)", "");
-    lines.push("**Status:** ready-for-agent", "");
-    t.acceptance.forEach((a) => lines.push("- [ ] " + a));
-    lines.push("");
+    lines.push("### For " + t.slug + "/.scratch/arcade/issues/NN-<ticket-name>.md", "");
+    ticket(lines, t, "Ready check: \"" + t.check + "\" failed", "ready-for-agent");
   });
 
   lines.push("## For you", "");
@@ -44,16 +40,21 @@ export function report(verdict) {
   verdict.tabletList.forEach((item) => {
     lines.push("- [ ] **" + item.name + "** (rule " + item.rule + "): " + item.steps);
   });
-  lines.push("", "If one fails, file this in that Game's .scratch/arcade/issues/NN-<slug>.md:", "");
+  lines.push("", "If one fails, file this in that Game's .scratch/arcade/issues/NN-<ticket-name>.md:", "");
   verdict.tabletList.forEach((item) => {
     lines.push("### If \"" + item.name + "\" fails", "");
-    lines.push("# NN: " + item.ticket.title, "");
-    lines.push("**What to build:** " + item.ticket.whatToBuild, "");
-    lines.push("**Suite rule:** " + item.rule + " (tablet check: \"" + item.name + "\" failed)", "");
-    lines.push("**Status:** ready-for-human", "");
-    item.ticket.acceptance.forEach((a) => lines.push("- [ ] " + a));
-    lines.push("");
+    ticket(lines, { rule: item.rule, ...item.ticket }, "tablet check: \"" + item.name + "\" failed", "ready-for-human");
   });
 
   return lines.join("\n");
+}
+
+// One ticket draft, in the Game's issue file format.
+function ticket(lines, t, source, status) {
+  lines.push("# NN: " + t.title, "");
+  lines.push("**What to build:** " + t.whatToBuild, "");
+  lines.push("**Suite rule:** " + t.rule + " (" + source + ")", "");
+  lines.push("**Status:** " + status, "");
+  t.acceptance.forEach((a) => lines.push("- [ ] " + a));
+  lines.push("");
 }

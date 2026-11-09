@@ -7,20 +7,21 @@
 
 import { games } from "../games.js";
 import { readyCheck } from "./ready-check/check.js";
-import { gatherFacts, starterIcon } from "./ready-check/gather.js";
+import { gatherFacts, localIcon, STARTER } from "./ready-check/gather.js";
 import { report } from "./ready-check/report.js";
 import { readFileSync } from "node:fs";
 
 // Accepted rule 2 exceptions (unprefixed storage names a Game may keep).
 const exceptions = JSON.parse(readFileSync(new URL("./ready-check/exceptions.json", import.meta.url), "utf8"));
 
+const allSlugs = [...new Set(games.map((g) => g.slug))];
 const args = process.argv.slice(2);
-const slugs = args.length ? args : [...new Set(games.map((g) => g.slug))];
+const slugs = args.length ? args : allSlugs;
 
 const facts = [];
 for (const slug of slugs) facts.push(await gatherFacts(slug));
 // A Game still publishing the starter's placeholder icon isn't Ready.
-const placeholderIcons = [starterIcon().sha256];
-const verdict = readyCheck(facts, { exceptions, placeholderIcons });
+const placeholderIcons = [localIcon(STARTER.folder).sha256];
+const verdict = readyCheck(facts, { exceptions, placeholderIcons, slugs: allSlugs });
 console.log(report(verdict));
 process.exitCode = verdict.games.every((g) => g.passes) ? 0 : 1;
