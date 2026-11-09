@@ -16,19 +16,31 @@
 //     serviceWorkers  [{ file, line, scope }] each service worker
 //                     registration; scope is the site path it can control
 //                     (e.g. "/secret-script-studio/"), or null if unreadable
+//   git    the Game's local repo at Projects\<slug>\, null if there is none,
+//          or left out when not gathered (no "for you" items then):
+//            defaultBranch     e.g. "main"
+//            unmergedBranches  [{ name, commits }] commits not on the default
+//            unpushed          [{ branch, commits }] commits not on its upstream
+//            untracked         [paths] untracked, not ignored
+//            worktrees         [{ path, branch, merged }] extra worktrees
 //
 // Options (second argument to readyCheck):
 //   exceptions  [{ slug, name, why }] accepted rule 2 exceptions: that Game
 //               may use that exact unprefixed storage name (e.g. a throwaway
 //               test page). Kept as data next to the CLI, not in this logic.
 //
-// Verdict: { games: [one entry per Game, in the order given] }, each entry
-//   slug     the Game's slug
-//   checks   [{ name, rule, status }] in grid order; status is "pass",
-//            "fail", or "skip" (not judged because a check it needs failed)
-//   passes   true when every check passes. Ready is still Dad's call.
-//   tickets  one draft per failed check: { check, rule, title, whatToBuild,
-//            acceptance: [criteria] }
+// Verdict: { games, tabletList }
+//   games       one entry per Game, in the order given:
+//     slug      the Game's slug
+//     checks    [{ name, rule, status }] in grid order; status is "pass",
+//               "fail", or "skip" (not judged because a check it needs failed)
+//     passes    true when every check passes. Ready is still Dad's call.
+//     tickets   one draft per failed check: { check, rule, title, whatToBuild,
+//               acceptance: [criteria] }
+//     forYou    [lines] git housekeeping for Dad; never affects checks/passes
+//   tabletList  the manual checks a script can't do, for every Game:
+//               [{ name, rule, steps, ticket: { title, whatToBuild,
+//               acceptance } }]; a failure is filed as ready-for-human
 
 // The checks, in grid order. Adding a check is one entry here. Each one:
 //   name     the grid column, and how tickets refer to it
@@ -166,6 +178,42 @@ function strayWorkers(facts) {
   return facts.source.serviceWorkers.filter((w) => w.scope === null || !w.scope.startsWith(own));
 }
 
+// The manual tablet list: what a script can't see, run by Dad on the tablet for
+// each Game. A failure is filed in that Game's repo from `ticket`, as
+// ready-for-human (only the tablet can confirm the fix).
+const TABLET_LIST = [
+  {
+    name: "house button returns to the Arcade",
+    rule: 5,
+    steps: "Open the Game from its Tile, tap its house button: the Arcade menu shows, still fullscreen.",
+    ticket: {
+      title: "House button returns to the Arcade on the tablet",
+      whatToBuild:
+        "On the tablet, the Game's house button didn't bring back the Arcade menu. " +
+        "Every Game needs a house button linking to / (suite rule 5).",
+      acceptance: [
+        "On the tablet, tapping the house button shows the Arcade menu",
+        "The Arcade is still fullscreen afterwards",
+      ],
+    },
+  },
+  {
+    name: "system Back returns to the Arcade",
+    rule: 5,
+    steps: "Open the Game from its Tile, press the tablet's Back: the Arcade menu shows, still fullscreen.",
+    ticket: {
+      title: "System Back returns to the Arcade on the tablet",
+      whatToBuild:
+        "On the tablet, pressing Back in the Game didn't bring back the Arcade menu. " +
+        "The Game mustn't trap or swallow Back (suite rule 5).",
+      acceptance: [
+        "On the tablet, pressing Back from the Game's first screen shows the Arcade menu",
+        "The Arcade is still fullscreen afterwards",
+      ],
+    },
+  },
+];
+
 // Storage names that break rule 2: not starting with the slug, unreadable,
 // and not an accepted exception for this Game.
 function unprefixedStorage(facts, options) {
@@ -184,7 +232,7 @@ function describeStorage(s) {
 
 export function readyCheck(gamesFacts, { exceptions = [] } = {}) {
   const options = { exceptions };
-  return { games: gamesFacts.map((facts) => checkGame(facts, options)) };
+  return { games: gamesFacts.map((facts) => checkGame(facts, options)), tabletList: TABLET_LIST };
 }
 
 function checkGame(facts, options) {
@@ -207,5 +255,27 @@ function checkGame(facts, options) {
     checks,
     passes: checks.every((c) => c.status === "pass"),
     tickets,
+    forYou: forYou(facts.git),
   };
+}
+
+// Git housekeeping for Dad, one line per thing to do. Never a check: it can't
+// fail a Game, and the Ready check never does it (the Arcade never fixes a Game).
+function forYou(git) {
+  if (git === undefined) return [];
+  if (git === null) return ["No local repo found: clone it into Projects\\ so the Ready check can see its git state"];
+  const items = [];
+  git.unmergedBranches.forEach((b) =>
+    items.push("Merge " + b.name + " (" + commits(b.commits) + ") into " + git.defaultBranch));
+  git.unpushed.forEach((u) => items.push("Push " + commits(u.commits) + " on " + u.branch));
+  git.untracked.forEach((file) => items.push("Commit or delete untracked " + file));
+  git.worktrees.forEach((w) =>
+    items.push(w.merged
+      ? "Remove merged worktree " + w.path + " (" + w.branch + ")"
+      : "Merge or remove worktree " + w.path + " (" + w.branch + ", not merged)"));
+  return items;
+}
+
+function commits(n) {
+  return n + (n === 1 ? " commit" : " commits");
 }
