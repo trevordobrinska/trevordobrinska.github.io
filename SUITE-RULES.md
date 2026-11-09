@@ -3,7 +3,7 @@
 Every Game is published under `https://trevordobrinska.github.io/<game-slug>/`. They all share **one browser origin**, so they share storage and service-worker space. Follow these rules.
 
 1. **Own path, relative URLs.** The Game's repo name is its slug. Build with relative paths (Vite `base: "./"`) so it works under `/<game-slug>/`.
-2. **Prefix all saved data with the slug.** IndexedDB database names, localStorage keys, and cache names all start with `<game-slug>` (e.g. database `doodle-monsters`, key `doodle-monsters:hard-mode`). Never read or clear another Game's data unless a design decision says so.
+2. **Prefix all saved data with the slug.** IndexedDB database names, localStorage keys, and cache names are all `<game-slug>`, or start with `<game-slug>` followed by a separator such as `:` or `-` (e.g. database `doodle-monsters`, key `doodle-monsters:hard-mode`). Never read or clear another Game's data unless a design decision says so.
 3. **Stay inside your own path.** If the Game registers a service worker, its scope must be its own path, never `/`. Never claim the site root.
 4. **Publish a Tile icon** at `/<game-slug>/icon-512.png`: square, 512×512 PNG. The Arcade loads it from there.
 5. **A way home.** The Game's home screen has a small house button linking to the Arcade (`/`).
